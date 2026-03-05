@@ -267,15 +267,13 @@ function App() {
     if (sty) p.set("s", sty);
     if (lang) p.set("l", lang);
     if (wd) p.set("w", "1");
-    var base = window.location.origin + window.location.pathname;
-    if (base.endsWith("/")) base = base.slice(0, -1);
-    var pathParts = base.split("/");
-    pathParts.pop();
-    var url = pathParts.join("/") + "/agent.html?" + p.toString();
+    var base = window.location.href.split("?")[0].split("#")[0];
+    var dir = base.substring(0, base.lastIndexOf("/") + 1);
+    var url = dir + "agent.html?" + p.toString();
     navigator.clipboard.writeText(url);
     setCpa(true);
     setTimeout(function() { setCpa(false); }, 2000);
-  };
+};
 
   var wSamples = function() {
     if (sty === "modal") return WM;
