@@ -18,6 +18,7 @@ hr { border: none; border-top: 1px solid #ddd; margin: 32px 0; }
 </style>
 </head>
 <body>
+<div id="root"></div>
 <script>
 // Parse URL params
 var params = new URLSearchParams(window.location.search);
@@ -30,8 +31,12 @@ var _B = ["Moon","Pay"];
 var MP = _B.join("");
 var MPURL = "https://" + MP.toLowerCase() + ".hel.io";
 var _rq = "require";
+var BT = "\u0060";
+var embedSrc = "https://embed.deposits.hel.io/assets/index-v1.js";
+var wFn = MP.toLowerCase() + "CommerceDeposit";
+var SCR_O = "<" + "script";
+var SCR_C = "</" + "script" + ">";
 
-// Links
 var L = {
   docs: "https://docs.hel.io/docs/deposits",
   gs: "https://docs.hel.io/reference/getting-started-1",
@@ -54,172 +59,468 @@ var L = {
   denv: "https://demo.hel.io",
 };
 
-var BT = "\u0060";
-var embedSrc = "https://embed.deposits.hel.io/assets/index-v1.js";
-var wFn = MP.toLowerCase() + "CommerceDeposit";
-
 var styleLabels = { headless: "Fully Headless (API only)", modal: "Pre-built Modal", standalone: "Standalone Widget", iframe: "Iframe Embed" };
 var langLabels = { go: "Go", node: "Node.js", react: "React", svelte: "Svelte", vanilla: "Vanilla JS" };
 
-// ── Code samples ──
+// Helper to escape HTML in code blocks
+function esc(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function lnk(url, txt) { return '<a href="' + url + '">' + (txt || url) + '</a>'; }
 
-var goCode = {
-setup: "package commerce\n\nimport (\n    \"bytes\"\n    \"encoding/json\"\n    \"fmt\"\n    \"io\"\n    \"net/http\"\n    \"time\"\n)\n\nconst baseURL = \"https://api.hel.io/v1\"\n\ntype Client struct {\n    apiKey     string\n    apiSecret  string\n    httpClient *http.Client\n}\n\nfunc NewClient(apiKey, apiSecret string) *Client {\n    return &Client{\n        apiKey:    apiKey,\n        apiSecret: apiSecret,\n        httpClient: &http.Client{Timeout: 30 * time.Second},\n    }\n}\n\nfunc (c *Client) doRequest(method, rawURL string, body any, target any) error {\n    var reqBody io.Reader\n    if body != nil {\n        b, err := json.Marshal(body)\n        if err != nil {\n            return fmt.Errorf(\"marshalling request body: %w\", err)\n        }\n        reqBody = bytes.NewReader(b)\n    }\n    req, err := http.NewRequest(method, rawURL, reqBody)\n    if err != nil {\n        return fmt.Errorf(\"creating request: %w\", err)\n    }\n    req.Header.Set(\"Authorization\", \"Bearer \"+c.apiSecret)\n    req.Header.Set(\"Content-Type\", \"application/json\")\n    q := req.URL.Query()\n    q.Set(\"apiKey\", c.apiKey)\n    req.URL.RawQuery = q.Encode()\n    resp, err := c.httpClient.Do(req)\n    if err != nil {\n        return fmt.Errorf(\"executing request: %w\", err)\n    }\n    defer resp.Body.Close()\n    if resp.StatusCode < 200 || resp.StatusCode >= 300 {\n        respBody, _ := io.ReadAll(resp.Body)\n        return fmt.Errorf(\"API error (status %d): %s\", resp.StatusCode, string(respBody))\n    }\n    if target != nil {\n        if err := json.NewDecoder(resp.Body).Decode(target); err != nil {\n            return fmt.Errorf(\"decoding response: %w\", err)\n        }\n    }\n    return nil\n}",
+// ── Code samples (stored as arrays to avoid script-closing issues) ──
 
-createCustomer: "type CreateCustomerRequest struct {\n    DepositID           string  " + BT + "json:\"depositId\"" + BT + "\n    CustomerID          string  " + BT + "json:\"customerId\"" + BT + "\n    RecipientPublicKeys []string " + BT + "json:\"recipientPublicKeys\"" + BT + "\n    AdditionalJSON      *string " + BT + "json:\"additionalJSON,omitempty\"" + BT + "\n}\n\ntype CreateCustomerResponse struct {\n    Token          string          " + BT + "json:\"token\"" + BT + "\n    DepositWallets []DepositWallet " + BT + "json:\"depositWallets\"" + BT + "\n}\n\ntype DepositWallet struct {\n    ID               string          " + BT + "json:\"id\"" + BT + "\n    PublicKey        string          " + BT + "json:\"publicKey\"" + BT + "\n    BlockchainEngine json.RawMessage " + BT + "json:\"blockchainEngine\"" + BT + "\n}\n\nfunc (c *Client) CreateCustomer(req CreateCustomerRequest) (*CreateCustomerResponse, error) {\n    url := fmt.Sprintf(\"%s/deposit-customers/api-key\", baseURL)\n    var resp CreateCustomerResponse\n    if err := c.doRequest(http.MethodPost, url, req, &resp); err != nil {\n        return nil, fmt.Errorf(\"creating deposit customer: %w\", err)\n    }\n    return &resp, nil\n}",
+var goCode = {};
+goCode.setup = [
+'package commerce',
+'',
+'import (',
+'    "bytes"',
+'    "encoding/json"',
+'    "fmt"',
+'    "io"',
+'    "net/http"',
+'    "time"',
+')',
+'',
+'const baseURL = "https://api.hel.io/v1"',
+'',
+'type Client struct {',
+'    apiKey     string',
+'    apiSecret  string',
+'    httpClient *http.Client',
+'}',
+'',
+'func NewClient(apiKey, apiSecret string) *Client {',
+'    return &Client{',
+'        apiKey:    apiKey,',
+'        apiSecret: apiSecret,',
+'        httpClient: &http.Client{Timeout: 30 * time.Second},',
+'    }',
+'}',
+'',
+'func (c *Client) doRequest(method, rawURL string, body any, target any) error {',
+'    var reqBody io.Reader',
+'    if body != nil {',
+'        b, err := json.Marshal(body)',
+'        if err != nil {',
+'            return fmt.Errorf("marshalling request body: %w", err)',
+'        }',
+'        reqBody = bytes.NewReader(b)',
+'    }',
+'    req, err := http.NewRequest(method, rawURL, reqBody)',
+'    if err != nil {',
+'        return fmt.Errorf("creating request: %w", err)',
+'    }',
+'    req.Header.Set("Authorization", "Bearer "+c.apiSecret)',
+'    req.Header.Set("Content-Type", "application/json")',
+'    q := req.URL.Query()',
+'    q.Set("apiKey", c.apiKey)',
+'    req.URL.RawQuery = q.Encode()',
+'    resp, err := c.httpClient.Do(req)',
+'    if err != nil {',
+'        return fmt.Errorf("executing request: %w", err)',
+'    }',
+'    defer resp.Body.Close()',
+'    if resp.StatusCode < 200 || resp.StatusCode >= 300 {',
+'        respBody, _ := io.ReadAll(resp.Body)',
+'        return fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(respBody))',
+'    }',
+'    if target != nil {',
+'        if err := json.NewDecoder(resp.Body).Decode(target); err != nil {',
+'            return fmt.Errorf("decoding response: %w", err)',
+'        }',
+'    }',
+'    return nil',
+'}',
+].join("\n");
 
-getCustomer: "func (c *Client) GetCustomer(token string) (*CreateCustomerResponse, error) {\n    url := fmt.Sprintf(\"%s/deposit-customers/%s/api-key\", baseURL, token)\n    var resp CreateCustomerResponse\n    if err := c.doRequest(http.MethodGet, url, nil, &resp); err != nil {\n        return nil, fmt.Errorf(\"getting deposit customer: %w\", err)\n    }\n    return &resp, nil\n}",
+goCode.createCustomer = [
+'type CreateCustomerRequest struct {',
+'    DepositID           string  `json:"depositId"`',
+'    CustomerID          string  `json:"customerId"`',
+'    RecipientPublicKeys []string `json:"recipientPublicKeys"`',
+'    AdditionalJSON      *string `json:"additionalJSON,omitempty"`',
+'}',
+'',
+'type CreateCustomerResponse struct {',
+'    Token          string          `json:"token"`',
+'    DepositWallets []DepositWallet `json:"depositWallets"`',
+'}',
+'',
+'type DepositWallet struct {',
+'    ID               string          `json:"id"`',
+'    PublicKey        string          `json:"publicKey"`',
+'    BlockchainEngine json.RawMessage `json:"blockchainEngine"`',
+'}',
+'',
+'func (c *Client) CreateCustomer(req CreateCustomerRequest) (*CreateCustomerResponse, error) {',
+'    url := fmt.Sprintf("%s/deposit-customers/api-key", baseURL)',
+'    var resp CreateCustomerResponse',
+'    if err := c.doRequest(http.MethodPost, url, req, &resp); err != nil {',
+'        return nil, fmt.Errorf("creating deposit customer: %w", err)',
+'    }',
+'    return &resp, nil',
+'}',
+].join("\n");
 
-recordActivity: "func (c *Client) RecordWalletActivity(customerToken string) error {\n    url := fmt.Sprintf(\"%s/deposit-wallet/token/%s/activity\", baseURL, customerToken)\n    if err := c.doRequest(http.MethodPost, url, nil, nil); err != nil {\n        return fmt.Errorf(\"recording wallet activity: %w\", err)\n    }\n    return nil\n}\n\nfunc (c *Client) RecordWalletActivityByKeys(publicKeys []string) error {\n    url := fmt.Sprintf(\"%s/deposit-wallet/activity\", baseURL)\n    body := map[string][]string{\"wallets\": publicKeys}\n    if err := c.doRequest(http.MethodPost, url, body, nil); err != nil {\n        return fmt.Errorf(\"recording wallet activity by keys: %w\", err)\n    }\n    return nil\n}",
+goCode.getCustomer = [
+'func (c *Client) GetCustomer(token string) (*CreateCustomerResponse, error) {',
+'    url := fmt.Sprintf("%s/deposit-customers/%s/api-key", baseURL, token)',
+'    var resp CreateCustomerResponse',
+'    if err := c.doRequest(http.MethodGet, url, nil, &resp); err != nil {',
+'        return nil, fmt.Errorf("getting deposit customer: %w", err)',
+'    }',
+'    return &resp, nil',
+'}',
+].join("\n");
 
-getCurrencies: "func (c *Client) GetDepositCurrencies() ([]map[string]any, error) {\n    url := fmt.Sprintf(\"%s/currency/deposit\", baseURL)\n    var resp []map[string]any\n    if err := c.doRequest(http.MethodGet, url, nil, &resp); err != nil {\n        return nil, fmt.Errorf(\"getting deposit currencies: %w\", err)\n    }\n    return resp, nil\n}",
+goCode.recordActivity = [
+'func (c *Client) RecordWalletActivity(customerToken string) error {',
+'    url := fmt.Sprintf("%s/deposit-wallet/token/%s/activity", baseURL, customerToken)',
+'    if err := c.doRequest(http.MethodPost, url, nil, nil); err != nil {',
+'        return fmt.Errorf("recording wallet activity: %w", err)',
+'    }',
+'    return nil',
+'}',
+'',
+'func (c *Client) RecordWalletActivityByKeys(publicKeys []string) error {',
+'    url := fmt.Sprintf("%s/deposit-wallet/activity", baseURL)',
+'    body := map[string][]string{"wallets": publicKeys}',
+'    if err := c.doRequest(http.MethodPost, url, body, nil); err != nil {',
+'        return fmt.Errorf("recording wallet activity by keys: %w", err)',
+'    }',
+'    return nil',
+'}',
+].join("\n");
 
-webhook: "type WebhookPayload struct {\n    Event                         string          " + BT + "json:\"event\"" + BT + "\n    DepositID                     string          " + BT + "json:\"depositId\"" + BT + "\n    CustomerID                    string          " + BT + "json:\"customerId\"" + BT + "\n    Amount                        string          " + BT + "json:\"amount\"" + BT + "\n    FeesPaid                      string          " + BT + "json:\"feesPaid\"" + BT + "\n    GrossAmount                   string          " + BT + "json:\"grossAmount\"" + BT + "\n    GasCharge                     string          " + BT + "json:\"gasCharge\"" + BT + "\n    Currency                      json.RawMessage " + BT + "json:\"currency\"" + BT + "\n    TransactionObject             json.RawMessage " + BT + "json:\"transactionObject\"" + BT + "\n    OriginalAmount                *string         " + BT + "json:\"originalAmount,omitempty\"" + BT + "\n    OriginalCurrency              json.RawMessage " + BT + "json:\"originalCurrency,omitempty\"" + BT + "\n    WebhookDeliveryIdempotencyKey string          " + BT + "json:\"webhookDeliveryIdempotencyKey\"" + BT + "\n    TxIdempotencyKey              string          " + BT + "json:\"txIdempotencyKey\"" + BT + "\n}\n\nfunc HandleWebhook(sharedToken string) http.HandlerFunc {\n    return func(w http.ResponseWriter, r *http.Request) {\n        if r.Method != http.MethodPost {\n            http.Error(w, \"method not allowed\", http.StatusMethodNotAllowed)\n            return\n        }\n        body, err := io.ReadAll(r.Body)\n        if err != nil {\n            http.Error(w, \"failed to read body\", http.StatusBadRequest)\n            return\n        }\n        defer r.Body.Close()\n        signature := r.Header.Get(\"X-Signature\")\n        if !verifySignature(body, signature, sharedToken) {\n            http.Error(w, \"invalid signature\", http.StatusUnauthorized)\n            return\n        }\n        var payload WebhookPayload\n        if err := json.Unmarshal(body, &payload); err != nil {\n            http.Error(w, \"invalid payload\", http.StatusBadRequest)\n            return\n        }\n        fmt.Printf(\"Deposit event: %s for customer %s\\n\", payload.Event, payload.CustomerID)\n        w.WriteHeader(http.StatusOK)\n    }\n}\n\nfunc verifySignature(body []byte, signature, sharedToken string) bool {\n    mac := hmac.New(sha256.New, []byte(sharedToken))\n    mac.Write(body)\n    expected := hex.EncodeToString(mac.Sum(nil))\n    return hmac.Equal([]byte(expected), []byte(signature))\n}",
+goCode.getCurrencies = [
+'func (c *Client) GetDepositCurrencies() ([]map[string]any, error) {',
+'    url := fmt.Sprintf("%s/currency/deposit", baseURL)',
+'    var resp []map[string]any',
+'    if err := c.doRequest(http.MethodGet, url, nil, &resp); err != nil {',
+'        return nil, fmt.Errorf("getting deposit currencies: %w", err)',
+'    }',
+'    return resp, nil',
+'}',
+].join("\n");
 
-fullExample: "package main\n\nimport (\n    \"fmt\"\n    \"log\"\n    \"net/http\"\n)\n// Import your commerce package\n\nfunc main() {\n    client := commerce.NewClient(\"your-public-api-key\", \"your-api-secret\")\n\n    customer, err := client.CreateCustomer(commerce.CreateCustomerRequest{\n        DepositID:           \"your-deposit-id\",\n        CustomerID:          \"unique-customer-id\",\n        RecipientPublicKeys: []string{\"your-recipient-wallet-address\"},\n    })\n    if err != nil {\n        log.Fatalf(\"Failed to create customer: %v\", err)\n    }\n\n    fmt.Printf(\"Customer token: %s\\n\", customer.Token)\n    fmt.Printf(\"Deposit wallets: %+v\\n\", customer.DepositWallets)\n\n    _ = client.RecordWalletActivity(customer.Token)\n\n    http.HandleFunc(\"/webhooks/deposits\", commerce.HandleWebhook(\"your-shared-token\"))\n    log.Println(\"Listening on :8080\")\n    log.Fatal(http.ListenAndServe(\":8080\", nil))\n}",
-};
+goCode.webhook = [
+'type WebhookPayload struct {',
+'    Event                         string          `json:"event"`',
+'    DepositID                     string          `json:"depositId"`',
+'    CustomerID                    string          `json:"customerId"`',
+'    Amount                        string          `json:"amount"`',
+'    FeesPaid                      string          `json:"feesPaid"`',
+'    GrossAmount                   string          `json:"grossAmount"`',
+'    GasCharge                     string          `json:"gasCharge"`',
+'    Currency                      json.RawMessage `json:"currency"`',
+'    TransactionObject             json.RawMessage `json:"transactionObject"`',
+'    OriginalAmount                *string         `json:"originalAmount,omitempty"`',
+'    OriginalCurrency              json.RawMessage `json:"originalCurrency,omitempty"`',
+'    WebhookDeliveryIdempotencyKey string          `json:"webhookDeliveryIdempotencyKey"`',
+'    TxIdempotencyKey              string          `json:"txIdempotencyKey"`',
+'}',
+'',
+'func HandleWebhook(sharedToken string) http.HandlerFunc {',
+'    return func(w http.ResponseWriter, r *http.Request) {',
+'        if r.Method != http.MethodPost {',
+'            http.Error(w, "method not allowed", http.StatusMethodNotAllowed)',
+'            return',
+'        }',
+'        body, err := io.ReadAll(r.Body)',
+'        if err != nil {',
+'            http.Error(w, "failed to read body", http.StatusBadRequest)',
+'            return',
+'        }',
+'        defer r.Body.Close()',
+'        signature := r.Header.Get("X-Signature")',
+'        if !verifySignature(body, signature, sharedToken) {',
+'            http.Error(w, "invalid signature", http.StatusUnauthorized)',
+'            return',
+'        }',
+'        var payload WebhookPayload',
+'        if err := json.Unmarshal(body, &payload); err != nil {',
+'            http.Error(w, "invalid payload", http.StatusBadRequest)',
+'            return',
+'        }',
+'        fmt.Printf("Deposit event: %s for customer %s\\n", payload.Event, payload.CustomerID)',
+'        w.WriteHeader(http.StatusOK)',
+'    }',
+'}',
+'',
+'func verifySignature(body []byte, signature, sharedToken string) bool {',
+'    mac := hmac.New(sha256.New, []byte(sharedToken))',
+'    mac.Write(body)',
+'    expected := hex.EncodeToString(mac.Sum(nil))',
+'    return hmac.Equal([]byte(expected), []byte(signature))',
+'}',
+].join("\n");
 
-var nodeCode = {
-setup: "const BASE_URL = \"https://api.hel.io/v1\";\n\nclass CommerceClient {\n  constructor(apiKey, apiSecret) {\n    this.apiKey = apiKey;\n    this.apiSecret = apiSecret;\n  }\n\n  async doRequest(method, path, body = null) {\n    const url = new URL(path, BASE_URL);\n    url.searchParams.set(\"apiKey\", this.apiKey);\n    const options = {\n      method,\n      headers: {\n        \"Authorization\": \"Bearer \" + this.apiSecret,\n        \"Content-Type\": \"application/json\",\n      },\n    };\n    if (body) options.body = JSON.stringify(body);\n    const response = await fetch(url.toString(), options);\n    if (!response.ok) {\n      const text = await response.text();\n      throw new Error(\"API error (\" + response.status + \"): \" + text);\n    }\n    const ct = response.headers.get(\"content-type\");\n    if (ct && ct.includes(\"application/json\")) return response.json();\n    return null;\n  }\n}",
+goCode.fullExample = [
+'package main',
+'',
+'import (',
+'    "fmt"',
+'    "log"',
+'    "net/http"',
+')',
+'// Import your commerce package',
+'',
+'func main() {',
+'    client := commerce.NewClient("your-public-api-key", "your-api-secret")',
+'',
+'    customer, err := client.CreateCustomer(commerce.CreateCustomerRequest{',
+'        DepositID:           "your-deposit-id",',
+'        CustomerID:          "unique-customer-id",',
+'        RecipientPublicKeys: []string{"your-recipient-wallet-address"},',
+'    })',
+'    if err != nil {',
+'        log.Fatalf("Failed to create customer: %v", err)',
+'    }',
+'',
+'    fmt.Printf("Customer token: %s\\n", customer.Token)',
+'    fmt.Printf("Deposit wallets: %+v\\n", customer.DepositWallets)',
+'',
+'    _ = client.RecordWalletActivity(customer.Token)',
+'',
+'    http.HandleFunc("/webhooks/deposits", commerce.HandleWebhook("your-shared-token"))',
+'    log.Println("Listening on :8080")',
+'    log.Fatal(http.ListenAndServe(":8080", nil))',
+'}',
+].join("\n");
 
-createCustomer: "async createCustomer(depositId, customerId, recipientPublicKeys, additionalJSON) {\n  const body = { depositId, customerId, recipientPublicKeys };\n  if (additionalJSON) body.additionalJSON = additionalJSON;\n  return this.doRequest(\"POST\", \"/v1/deposit-customers/api-key\", body);\n}",
+// ── Node code ──
+var nodeCode = {};
+nodeCode.setup = [
+'const BASE_URL = "https://api.hel.io/v1";',
+'',
+'class CommerceClient {',
+'  constructor(apiKey, apiSecret) {',
+'    this.apiKey = apiKey;',
+'    this.apiSecret = apiSecret;',
+'  }',
+'',
+'  async doRequest(method, path, body = null) {',
+'    const url = new URL(path, BASE_URL);',
+'    url.searchParams.set("apiKey", this.apiKey);',
+'    const options = {',
+'      method,',
+'      headers: {',
+'        "Authorization": "Bearer " + this.apiSecret,',
+'        "Content-Type": "application/json",',
+'      },',
+'    };',
+'    if (body) options.body = JSON.stringify(body);',
+'    const response = await fetch(url.toString(), options);',
+'    if (!response.ok) {',
+'      const text = await response.text();',
+'      throw new Error("API error (" + response.status + "): " + text);',
+'    }',
+'    const ct = response.headers.get("content-type");',
+'    if (ct && ct.includes("application/json")) return response.json();',
+'    return null;',
+'  }',
+'}',
+].join("\n");
 
-getCustomer: "async getCustomer(depositCustomerToken) {\n  return this.doRequest(\"GET\", \"/v1/deposit-customers/\" + depositCustomerToken + \"/api-key\");\n}",
+nodeCode.createCustomer = [
+'async createCustomer(depositId, customerId, recipientPublicKeys, additionalJSON) {',
+'  const body = { depositId, customerId, recipientPublicKeys };',
+'  if (additionalJSON) body.additionalJSON = additionalJSON;',
+'  return this.doRequest("POST", "/v1/deposit-customers/api-key", body);',
+'}',
+].join("\n");
 
-recordActivity: "async recordWalletActivity(customerToken) {\n  return this.doRequest(\"POST\", \"/v1/deposit-wallet/token/\" + customerToken + \"/activity\");\n}\n\nasync recordWalletActivityByKeys(publicKeys) {\n  return this.doRequest(\"POST\", \"/v1/deposit-wallet/activity\", { wallets: publicKeys });\n}",
+nodeCode.getCustomer = [
+'async getCustomer(depositCustomerToken) {',
+'  return this.doRequest("GET", "/v1/deposit-customers/" + depositCustomerToken + "/api-key");',
+'}',
+].join("\n");
 
-getCurrencies: "async getDepositCurrencies() {\n  return this.doRequest(\"GET\", \"/v1/currency/deposit\");\n}",
+nodeCode.recordActivity = [
+'async recordWalletActivity(customerToken) {',
+'  return this.doRequest("POST", "/v1/deposit-wallet/token/" + customerToken + "/activity");',
+'}',
+'',
+'async recordWalletActivityByKeys(publicKeys) {',
+'  return this.doRequest("POST", "/v1/deposit-wallet/activity", { wallets: publicKeys });',
+'}',
+].join("\n");
 
-webhook: "const crypto = " + _rq + "(\"crypto\");\n\nfunction verifySignature(body, signature, sharedToken) {\n  const expected = crypto.createHmac(\"sha256\", sharedToken).update(body).digest(\"hex\");\n  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));\n}\n\nfunction webhookHandler(sharedToken) {\n  return (req, res) => {\n    const signature = req.headers[\"x-signature\"];\n    const rawBody = JSON.stringify(req.body);\n    if (!verifySignature(rawBody, signature, sharedToken)) {\n      return res.status(401).json({ error: \"Invalid signature\" });\n    }\n    const { event, customerId } = req.body;\n    console.log(\"Deposit event: \" + event + \" for customer \" + customerId);\n    res.sendStatus(200);\n  };\n}",
+nodeCode.getCurrencies = [
+'async getDepositCurrencies() {',
+'  return this.doRequest("GET", "/v1/currency/deposit");',
+'}',
+].join("\n");
 
-fullExample: "const express = " + _rq + "(\"express\");\n\nconst client = new CommerceClient(\"your-public-api-key\", \"your-api-secret\");\nconst app = express();\napp.use(express.json());\n\napp.post(\"/api/deposit-customer\", async (req, res) => {\n  try {\n    const customer = await client.createCustomer(\"your-deposit-id\", req.body.customerId, [\"your-recipient-wallet-address\"]);\n    await client.recordWalletActivity(customer.token);\n    res.json({ token: customer.token, depositWallets: customer.depositWallets });\n  } catch (err) {\n    res.status(500).json({ error: err.message });\n  }\n});\n\napp.post(\"/webhooks/deposits\", webhookHandler(\"your-shared-token\"));\napp.listen(8080, () => console.log(\"Listening on :8080\"));",
-};
+nodeCode.webhook = [
+'const crypto = require("crypto");',
+'',
+'function verifySignature(body, signature, sharedToken) {',
+'  const expected = crypto.createHmac("sha256", sharedToken).update(body).digest("hex");',
+'  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));',
+'}',
+'',
+'function webhookHandler(sharedToken) {',
+'  return (req, res) => {',
+'    const signature = req.headers["x-signature"];',
+'    const rawBody = JSON.stringify(req.body);',
+'    if (!verifySignature(rawBody, signature, sharedToken)) {',
+'      return res.status(401).json({ error: "Invalid signature" });',
+'    }',
+'    const { event, customerId } = req.body;',
+'    console.log("Deposit event: " + event + " for customer " + customerId);',
+'    res.sendStatus(200);',
+'  };',
+'}',
+].join("\n");
 
-var widgetCode = {
-modal: {
-  react: "import { " + MP + "CommerceDeposit } from '@heliofi/deposit-react';\nimport { useState } from 'react';\n\nfunction DepositModal({ customerToken }) {\n  const [open, setOpen] = useState(false);\n  return (\n    <>\n      <button onClick={() => setOpen(true)}>Deposit</button>\n      {open && (\n        <div className=\"modal-overlay\" onClick={() => setOpen(false)}>\n          <div className=\"modal-content\" onClick={e => e.stopPropagation()}>\n            <" + MP + "CommerceDeposit config={{\n              depositCustomerToken: customerToken, network: 'main', display: 'inline',\n              onSuccess: () => setOpen(false),\n              onError: (err) => console.error(err),\n            }} />\n          </div>\n        </div>\n      )}\n    </>\n  );\n}",
-  svelte: "<script>\n  import { onMount } from 'svelte';\n  let showModal = false, container, widget = null;\n  const TOKEN = 'your-deposit-customer-token';\n  onMount(() => {\n    const script = document.createElement('script');\n    script.type = 'module'; script.src = '" + embedSrc + "';\n    document.head.appendChild(script);\n    return () => script.remove();\n  });\n  function open() {\n    showModal = true;\n    if (!widget) setTimeout(() => {\n      widget = window." + wFn + "(container, {\n        depositCustomerToken: TOKEN, network: 'main', display: 'inline',\n        onSuccess: () => { showModal = false; }, onError: (e) => console.error(e),\n      });\n    }, 100);\n  }\n</script>\n<button on:click={open}>Deposit</button>",
-  vanilla: "<script type=\"module\" src=\"" + embedSrc + "\" id=\"deposit-script\"></script>\n<button id=\"deposit-btn\">Deposit</button>\n<div id=\"modal-overlay\" style=\"display:none\">\n  <div id=\"modal-content\"><div id=\"deposit-container\"></div></div>\n</div>\n<script>\ndocument.getElementById('deposit-btn').addEventListener('click', () => {\n  document.getElementById('modal-overlay').style.display = 'flex';\n  window." + wFn + "(document.getElementById('deposit-container'), {\n    depositCustomerToken: 'your-token-here', network: 'main', display: 'inline',\n    onSuccess: () => { document.getElementById('modal-overlay').style.display = 'none'; },\n    onError: (err) => console.error(err),\n  });\n});\n</script>",
-},
-standalone: {
-  react: "import { " + MP + "CommerceDeposit } from '@heliofi/deposit-react';\n\nfunction DepositWidget({ customerToken }) {\n  return <" + MP + "CommerceDeposit config={{\n    depositCustomerToken: customerToken, network: 'main', display: 'inline',\n    onSuccess: (data) => console.log('Done:', data),\n    onError: (err) => console.error(err),\n  }} />;\n}",
-  svelte: "<script>\n  import { onMount } from 'svelte';\n  let container;\n  onMount(() => {\n    const script = document.createElement('script');\n    script.type = 'module'; script.src = '" + embedSrc + "';\n    script.onload = () => {\n      window." + wFn + "(container, {\n        depositCustomerToken: 'your-token-here', network: 'main', display: 'inline',\n        onSuccess: () => console.log('Done!'), onError: (e) => console.error(e),\n      });\n    };\n    document.head.appendChild(script);\n    return () => script.remove();\n  });\n</script>\n<div bind:this={container} />",
-  vanilla: "<script type=\"module\" src=\"" + embedSrc + "\" id=\"deposit-script\"></script>\n<div id=\"deposit-container\"></div>\n<script>\ndocument.getElementById('deposit-script').addEventListener('load', () => {\n  window." + wFn + "(document.getElementById('deposit-container'), {\n    depositCustomerToken: 'your-token-here', network: 'main', display: 'inline',\n    onSuccess: () => console.log('Done!'), onError: (err) => console.error(err),\n  });\n});\n</script>",
-},
-iframe: {
-  react: "import { useEffect, useState } from 'react';\n\nfunction DepositIframe({ customerToken }) {\n  const [height, setHeight] = useState(260);\n  useEffect(() => {\n    const handler = (e) => {\n      if (e.origin !== '" + MPURL + "') return;\n      if (e.data.type === 'onHeightChanged') setHeight(e.data.height);\n      if (e.data.type === 'onSuccess') alert('Deposit completed!');\n      if (e.data.type === 'onError') alert('Error: ' + e.data.message);\n    };\n    window.addEventListener('message', handler);\n    return () => window.removeEventListener('message', handler);\n  }, []);\n  return <iframe allow=\"clipboard-write\" style={{ width: 420, minHeight: 260, height }}\n    src={'" + MPURL + "/embed/deposit/' + customerToken} />;\n}",
-  svelte: "<script>\n  import { onMount } from 'svelte';\n  export let customerToken;\n  let iframeHeight = 260;\n  onMount(() => {\n    const handler = (e) => {\n      if (e.origin !== '" + MPURL + "') return;\n      if (e.data.type === 'onHeightChanged') iframeHeight = e.data.height;\n      if (e.data.type === 'onSuccess') alert('Deposit completed!');\n      if (e.data.type === 'onError') alert('Error: ' + e.data.message);\n    };\n    window.addEventListener('message', handler);\n    return () => window.removeEventListener('message', handler);\n  });\n</script>\n<iframe allow=\"clipboard-write\" style=\"width:420px;min-height:260px;height:{iframeHeight}px\"\n  src=\"" + MPURL + "/embed/deposit/{customerToken}\" />",
-  vanilla: "<iframe id=\"deposit-iframe\" allow=\"clipboard-write\" style=\"width:420px;min-height:260px;\"\n  src=\"" + MPURL + "/embed/deposit/your-token-here\"></iframe>\n<script>\nwindow.addEventListener('message', (e) => {\n  if (e.origin !== '" + MPURL + "') return;\n  var iframe = document.getElementById('deposit-iframe');\n  switch (e.data.type) {\n    case 'onHeightChanged': iframe.style.height = e.data.height + 'px'; break;\n    case 'onSuccess': alert('Deposit completed!'); break;\n    case 'onError': alert('Error: ' + e.data.message); break;\n  }\n});\n</script>",
-},
-};
+nodeCode.fullExample = [
+'const express = require("express");',
+'',
+'const client = new CommerceClient("your-public-api-key", "your-api-secret");',
+'const app = express();',
+'app.use(express.json());',
+'',
+'app.post("/api/deposit-customer", async (req, res) => {',
+'  try {',
+'    const customer = await client.createCustomer(',
+'      "your-deposit-id", req.body.customerId,',
+'      ["your-recipient-wallet-address"]',
+'    );',
+'    await client.recordWalletActivity(customer.token);',
+'    res.json({ token: customer.token, depositWallets: customer.depositWallets });',
+'  } catch (err) {',
+'    res.status(500).json({ error: err.message });',
+'  }',
+'});',
+'',
+'app.post("/webhooks/deposits", webhookHandler("your-shared-token"));',
+'app.listen(8080, () => console.log("Listening on :8080"));',
+].join("\n");
+
+// ── Widget code (using SCR_O / SCR_C to avoid breaking the outer script) ──
+var widgetCode = {};
+widgetCode.modal = {};
+widgetCode.modal.react = 'import { ' + MP + 'CommerceDeposit } from \'@heliofi/deposit-react\';\nimport { useState } from \'react\';\n\nfunction DepositModal({ customerToken }) {\n  const [open, setOpen] = useState(false);\n  return (\n    <>\n      <button onClick={() => setOpen(true)}>Deposit</button>\n      {open && (\n        <div className="modal-overlay" onClick={() => setOpen(false)}>\n          <div className="modal-content" onClick={e => e.stopPropagation()}>\n            <' + MP + 'CommerceDeposit config={{\n              depositCustomerToken: customerToken, network: \'main\',\n              display: \'inline\',\n              onSuccess: () => setOpen(false),\n              onError: (err) => console.error(err),\n            }} />\n          </div>\n        </div>\n      )}\n    </>\n  );\n}';
+widgetCode.modal.svelte = '<' + 'script>\n  import { onMount } from \'svelte\';\n  let showModal = false, container, widget = null;\n  const TOKEN = \'your-deposit-customer-token\';\n  onMount(() => {\n    const s = document.createElement(\'script\');\n    s.type = \'module\'; s.src = \'' + embedSrc + '\';\n    document.head.appendChild(s);\n    return () => s.remove();\n  });\n  function open() {\n    showModal = true;\n    if (!widget) setTimeout(() => {\n      widget = window.' + wFn + '(container, {\n        depositCustomerToken: TOKEN, network: \'main\', display: \'inline\',\n        onSuccess: () => { showModal = false; }, onError: (e) => console.error(e),\n      });\n    }, 100);\n  }\n<' + '/script>\n<button on:click={open}>Deposit</button>';
+widgetCode.modal.vanilla = SCR_O + ' type="module" src="' + embedSrc + '" id="deposit-script">' + SCR_C + '\n<button id="deposit-btn">Deposit</button>\n<div id="modal-overlay" style="display:none">\n  <div id="modal-content"><div id="deposit-container"></div></div>\n</div>\n' + SCR_O + '>\ndocument.getElementById(\'deposit-btn\').addEventListener(\'click\', () => {\n  document.getElementById(\'modal-overlay\').style.display = \'flex\';\n  window.' + wFn + '(document.getElementById(\'deposit-container\'), {\n    depositCustomerToken: \'your-token-here\', network: \'main\', display: \'inline\',\n    onSuccess: () => { document.getElementById(\'modal-overlay\').style.display = \'none\'; },\n    onError: (err) => console.error(err),\n  });\n});\n' + SCR_C;
+
+widgetCode.standalone = {};
+widgetCode.standalone.react = 'import { ' + MP + 'CommerceDeposit } from \'@heliofi/deposit-react\';\n\nfunction DepositWidget({ customerToken }) {\n  return <' + MP + 'CommerceDeposit config={{\n    depositCustomerToken: customerToken, network: \'main\', display: \'inline\',\n    onSuccess: (data) => console.log(\'Done:\', data),\n    onError: (err) => console.error(err),\n  }} />;\n}';
+widgetCode.standalone.svelte = '<' + 'script>\n  import { onMount } from \'svelte\';\n  let container;\n  onMount(() => {\n    const s = document.createElement(\'script\');\n    s.type = \'module\'; s.src = \'' + embedSrc + '\';\n    s.onload = () => {\n      window.' + wFn + '(container, {\n        depositCustomerToken: \'your-token-here\', network: \'main\', display: \'inline\',\n        onSuccess: () => console.log(\'Done!\'), onError: (e) => console.error(e),\n      });\n    };\n    document.head.appendChild(s);\n    return () => s.remove();\n  });\n<' + '/script>\n<div bind:this={container} />';
+widgetCode.standalone.vanilla = SCR_O + ' type="module" src="' + embedSrc + '" id="deposit-script">' + SCR_C + '\n<div id="deposit-container"></div>\n' + SCR_O + '>\ndocument.getElementById(\'deposit-script\').addEventListener(\'load\', () => {\n  window.' + wFn + '(document.getElementById(\'deposit-container\'), {\n    depositCustomerToken: \'your-token-here\', network: \'main\', display: \'inline\',\n    onSuccess: () => console.log(\'Done!\'), onError: (err) => console.error(err),\n  });\n});\n' + SCR_C;
+
+widgetCode.iframe = {};
+widgetCode.iframe.react = 'import { useEffect, useState } from \'react\';\n\nfunction DepositIframe({ customerToken }) {\n  const [height, setHeight] = useState(260);\n  useEffect(() => {\n    const handler = (e) => {\n      if (e.origin !== \'' + MPURL + '\') return;\n      if (e.data.type === \'onHeightChanged\') setHeight(e.data.height);\n      if (e.data.type === \'onSuccess\') alert(\'Deposit completed!\');\n      if (e.data.type === \'onError\') alert(\'Error: \' + e.data.message);\n    };\n    window.addEventListener(\'message\', handler);\n    return () => window.removeEventListener(\'message\', handler);\n  }, []);\n  return <iframe allow="clipboard-write" style={{ width: 420, minHeight: 260, height }}\n    src={\'' + MPURL + '/embed/deposit/\' + customerToken} />;\n}';
+widgetCode.iframe.svelte = '<' + 'script>\n  import { onMount } from \'svelte\';\n  export let customerToken;\n  let iframeHeight = 260;\n  onMount(() => {\n    const handler = (e) => {\n      if (e.origin !== \'' + MPURL + '\') return;\n      if (e.data.type === \'onHeightChanged\') iframeHeight = e.data.height;\n      if (e.data.type === \'onSuccess\') alert(\'Deposit completed!\');\n      if (e.data.type === \'onError\') alert(\'Error: \' + e.data.message);\n    };\n    window.addEventListener(\'message\', handler);\n    return () => window.removeEventListener(\'message\', handler);\n  });\n<' + '/script>\n<iframe allow="clipboard-write" style="width:420px;min-height:260px;height:{iframeHeight}px"\n  src="' + MPURL + '/embed/deposit/{customerToken}" />';
+widgetCode.iframe.vanilla = '<iframe id="deposit-iframe" allow="clipboard-write" style="width:420px;min-height:260px;"\n  src="' + MPURL + '/embed/deposit/your-token-here"></iframe>\n' + SCR_O + '>\nwindow.addEventListener(\'message\', (e) => {\n  if (e.origin !== \'' + MPURL + '\') return;\n  var iframe = document.getElementById(\'deposit-iframe\');\n  switch (e.data.type) {\n    case \'onHeightChanged\': iframe.style.height = e.data.height + \'px\'; break;\n    case \'onSuccess\': alert(\'Deposit completed!\'); break;\n    case \'onError\': alert(\'Error: \' + e.data.message); break;\n  }\n});\n' + SCR_C;
 
 // ── Build the page ──
+var h = "";
 
-var html = "";
+h += "<h1>" + esc(MP) + " Commerce — Integration Guide for " + esc(partner) + "</h1>";
+h += '<div class="meta">Integration: ' + esc(styleLabels[sty] || sty) + ' | Language: ' + esc(langLabels[lang] || lang) + (wd ? ' | Withdrawals: Included' : '') + '</div>';
 
-html += "<h1>" + MP + " Commerce — Integration Guide for " + partner + "</h1>\n";
-html += '<div class="meta">Integration: ' + styleLabels[sty] + ' | Language: ' + langLabels[lang] + (wd ? ' | Withdrawals: Included' : '') + '</div>\n';
-html += '<div class="note">This is a machine-readable version of the integration guide. For the visual version, visit: <a href="' + window.location.href.replace("agent.html", "") + '?p=' + encodeURIComponent(partner) + '&s=' + sty + '&l=' + lang + (wd ? '&w=1' : '') + '">Visual Guide</a></div>\n';
+var visualURL = window.location.href.replace("agent.html", "index.html").replace(/[?#].*/, "") + "?p=" + encodeURIComponent(partner) + "&s=" + sty + "&l=" + lang + (wd ? "&w=1" : "");
+h += '<div class="note">This is a machine-readable version of the integration guide. For the visual version, visit: ' + lnk(visualURL, "Visual Guide") + '</div>';
 
-// ── DEPOSITS ──
-html += "<h2>Deposits Integration Steps</h2>\n";
-html += "<p>Full documentation: <a href='" + L.docs + "'>" + L.docs + "</a></p>\n";
-html += "<p>The product is fully self-serve. KYB is not required to start the integration process.</p>\n\n";
+// DEPOSITS
+h += "<h2>Deposits Integration Steps</h2>";
+h += "<p>Full documentation: " + lnk(L.docs) + "</p>";
+h += "<p>The product is fully self-serve. KYB is not required to start the integration process.</p>";
 
-html += "<h3>Authentication</h3>\n";
-html += "<p>The API requires TWO credentials on every authenticated endpoint:</p>\n";
-html += "<p>1. API Secret → sent as Authorization: Bearer &lt;API_SECRET&gt; header</p>\n";
-html += "<p>2. API Key → sent as ?apiKey=&lt;PUBLIC_API_KEY&gt; query parameter</p>\n";
-html += "<p>Both are generated in the Dashboard under Developer: <a href='" + L.gs + "'>" + L.gs + "</a></p>\n\n";
+h += "<h3>Authentication</h3>";
+h += "<p>The API requires TWO credentials on every authenticated endpoint:</p>";
+h += "<p>1. <strong>API Secret</strong> &rarr; sent as <code>Authorization: Bearer &lt;API_SECRET&gt;</code> header</p>";
+h += "<p>2. <strong>API Key</strong> &rarr; sent as <code>?apiKey=&lt;PUBLIC_API_KEY&gt;</code> query parameter</p>";
+h += "<p>Both are generated in the Dashboard under <strong>Developer</strong>: " + lnk(L.gs) + "</p>";
 
-html += "<h3>Steps</h3>\n";
-html += "<p>1. Log in to the Dashboard: <a href='" + L.dash + "'>" + L.dash + "</a></p>\n";
-html += "<p>2. Obtain API keys via the Developer tab: <a href='" + L.gs + "'>" + L.gs + "</a></p>\n";
-html += "<p>3. Create a Deposit to generate a depositId</p>\n";
-html += "<p>4. Create deposit customers via the API: <a href='" + L.cc + "'>" + L.cc + "</a></p>\n";
-html += "<p>   - Store the Deposit Customer token for reuse</p>\n";
-html += "<p>   - Update Customer: <a href='" + L.uc + "'>" + L.uc + "</a></p>\n";
-html += "<p>   - Get Customer: <a href='" + L.gc + "'>" + L.gc + "</a></p>\n";
-html += "<p>5. Serve the deposit UI: <a href='" + L.dui + "'>" + L.dui + "</a></p>\n";
-html += "<p>   - Record Wallet Activity: <a href='" + L.ra + "'>" + L.ra + "</a></p>\n";
-html += "<p>   - Get Currencies: <a href='" + L.cur + "'>" + L.cur + "</a></p>\n";
-html += "<p>6. Implement webhooks: <a href='" + L.wh + "'>" + L.wh + "</a></p>\n";
-html += "<p>7. Fetch transaction data: <a href='" + L.atx + "'>By Deposit ID</a> | <a href='" + L.ctx + "'>By Customer Token</a></p>\n";
-html += "<p>8. Terms of service: <a href='" + L.tos + "'>" + L.tos + "</a></p>\n\n";
+h += "<h3>Steps</h3>";
+h += "<p>1. Log in to the Dashboard: " + lnk(L.dash) + "</p>";
+h += "<p>2. Obtain API keys via the Developer tab: " + lnk(L.gs) + "</p>";
+h += "<p>3. Create a Deposit to generate a <code>depositId</code></p>";
+h += "<p>4. Create deposit customers via the API: " + lnk(L.cc) + "</p>";
+h += "<p>&nbsp;&nbsp;&nbsp;- Store the Deposit Customer token for reuse</p>";
+h += "<p>&nbsp;&nbsp;&nbsp;- Update Customer: " + lnk(L.uc) + "</p>";
+h += "<p>&nbsp;&nbsp;&nbsp;- Get Customer: " + lnk(L.gc) + "</p>";
+h += "<p>5. Serve the deposit UI: " + lnk(L.dui) + "</p>";
+h += "<p>&nbsp;&nbsp;&nbsp;- Record Wallet Activity: " + lnk(L.ra) + "</p>";
+h += "<p>&nbsp;&nbsp;&nbsp;- Get Currencies: " + lnk(L.cur) + "</p>";
+h += "<p>6. Implement webhooks: " + lnk(L.wh) + "</p>";
+h += "<p>7. Fetch transaction data: " + lnk(L.atx, "By Deposit ID") + " | " + lnk(L.ctx, "By Customer Token") + "</p>";
+h += "<p>8. Terms of service: " + lnk(L.tos) + "</p>";
 
-html += "<h3>Live Demo</h3>\n";
-html += "<p>Live deposit demo: <a href='" + L.demo + "'>" + L.demo + "</a></p>\n";
-html += "<p>Demo environment (test configs): <a href='" + L.denv + "'>" + L.denv + "</a></p>\n\n";
+h += "<h3>Live Demo</h3>";
+h += "<p>Live deposit demo: " + lnk(L.demo) + "</p>";
+h += "<p>Demo environment (test configs): " + lnk(L.denv) + "</p>";
 
-html += "<hr>\n";
+h += "<hr>";
 
-// ── CODE SAMPLES ──
-
+// CODE SAMPLES
 if (sty === "headless" && lang === "go") {
-  html += "<h2>Headless Go Backend — Code Samples</h2>\n\n";
-  html += "<h3>Setup & Configuration</h3>\n<pre>" + goCode.setup + "</pre>\n\n";
-  html += "<h3>Create a Deposit Customer</h3>\n<p>API reference: <a href='" + L.cc + "'>" + L.cc + "</a></p>\n<pre>" + goCode.createCustomer + "</pre>\n\n";
-  html += "<h3>Get a Deposit Customer</h3>\n<p>API reference: <a href='" + L.gc + "'>" + L.gc + "</a></p>\n<pre>" + goCode.getCustomer + "</pre>\n\n";
-  html += "<h3>Record Wallet Activity</h3>\n<p>API reference: <a href='" + L.ra + "'>" + L.ra + "</a></p>\n<pre>" + goCode.recordActivity + "</pre>\n\n";
-  html += "<h3>Get Supported Currencies</h3>\n<p>API reference: <a href='" + L.cur + "'>" + L.cur + "</a></p>\n<pre>" + goCode.getCurrencies + "</pre>\n\n";
-  html += "<h3>Webhook Handler</h3>\n<p>API reference: <a href='" + L.wh + "'>" + L.wh + "</a></p>\n<p>Webhook headers: X-Signature (HMAC-SHA256), X-Webhook-Delivery-Id, X-Transaction-Id, Authorization</p>\n<p>Event types: DEPOSIT_TX_CONFIRMED, DEPOSIT_TX_SUBMITTED, DEPOSIT_TX_ENRICHED, ALL</p>\n<pre>" + goCode.webhook + "</pre>\n\n";
-  html += "<h3>Full Example</h3>\n<pre>" + goCode.fullExample + "</pre>\n\n";
+  h += "<h2>Headless Go Backend — Code Samples</h2>";
+  h += "<h3>Setup &amp; Configuration</h3><pre>" + esc(goCode.setup) + "</pre>";
+  h += "<h3>Create a Deposit Customer</h3><p>API reference: " + lnk(L.cc) + "</p><pre>" + esc(goCode.createCustomer) + "</pre>";
+  h += "<h3>Get a Deposit Customer</h3><p>API reference: " + lnk(L.gc) + "</p><pre>" + esc(goCode.getCustomer) + "</pre>";
+  h += "<h3>Record Wallet Activity</h3><p>API reference: " + lnk(L.ra) + "</p><pre>" + esc(goCode.recordActivity) + "</pre>";
+  h += "<h3>Get Supported Currencies</h3><p>API reference: " + lnk(L.cur) + "</p><pre>" + esc(goCode.getCurrencies) + "</pre>";
+  h += "<h3>Webhook Handler</h3><p>API reference: " + lnk(L.wh) + "</p>";
+  h += "<p>Webhook headers: <code>X-Signature</code> (HMAC-SHA256), <code>X-Webhook-Delivery-Id</code>, <code>X-Transaction-Id</code>, <code>Authorization</code></p>";
+  h += "<p>Event types: <code>DEPOSIT_TX_CONFIRMED</code>, <code>DEPOSIT_TX_SUBMITTED</code>, <code>DEPOSIT_TX_ENRICHED</code>, <code>ALL</code></p>";
+  h += "<pre>" + esc(goCode.webhook) + "</pre>";
+  h += "<h3>Full Example</h3><pre>" + esc(goCode.fullExample) + "</pre>";
 }
 
 if (sty === "headless" && lang === "node") {
-  html += "<h2>Headless Node.js Backend — Code Samples</h2>\n\n";
-  html += "<h3>Setup & Configuration</h3>\n<pre>" + nodeCode.setup + "</pre>\n\n";
-  html += "<h3>Create a Deposit Customer (add to CommerceClient class)</h3>\n<p>API reference: <a href='" + L.cc + "'>" + L.cc + "</a></p>\n<pre>" + nodeCode.createCustomer + "</pre>\n\n";
-  html += "<h3>Get a Deposit Customer (add to CommerceClient class)</h3>\n<p>API reference: <a href='" + L.gc + "'>" + L.gc + "</a></p>\n<pre>" + nodeCode.getCustomer + "</pre>\n\n";
-  html += "<h3>Record Wallet Activity (add to CommerceClient class)</h3>\n<p>API reference: <a href='" + L.ra + "'>" + L.ra + "</a></p>\n<pre>" + nodeCode.recordActivity + "</pre>\n\n";
-  html += "<h3>Get Supported Currencies (add to CommerceClient class)</h3>\n<p>API reference: <a href='" + L.cur + "'>" + L.cur + "</a></p>\n<pre>" + nodeCode.getCurrencies + "</pre>\n\n";
-  html += "<h3>Webhook Handler</h3>\n<p>API reference: <a href='" + L.wh + "'>" + L.wh + "</a></p>\n<p>Webhook headers: X-Signature (HMAC-SHA256), X-Webhook-Delivery-Id, X-Transaction-Id, Authorization</p>\n<p>Event types: DEPOSIT_TX_CONFIRMED, DEPOSIT_TX_SUBMITTED, DEPOSIT_TX_ENRICHED, ALL</p>\n<pre>" + nodeCode.webhook + "</pre>\n\n";
-  html += "<h3>Full Example (Express server)</h3>\n<pre>" + nodeCode.fullExample + "</pre>\n\n";
+  h += "<h2>Headless Node.js Backend — Code Samples</h2>";
+  h += "<h3>Setup &amp; Configuration</h3><pre>" + esc(nodeCode.setup) + "</pre>";
+  h += "<h3>Create a Deposit Customer (add to CommerceClient class)</h3><p>API reference: " + lnk(L.cc) + "</p><pre>" + esc(nodeCode.createCustomer) + "</pre>";
+  h += "<h3>Get a Deposit Customer (add to CommerceClient class)</h3><p>API reference: " + lnk(L.gc) + "</p><pre>" + esc(nodeCode.getCustomer) + "</pre>";
+  h += "<h3>Record Wallet Activity (add to CommerceClient class)</h3><p>API reference: " + lnk(L.ra) + "</p><pre>" + esc(nodeCode.recordActivity) + "</pre>";
+  h += "<h3>Get Supported Currencies (add to CommerceClient class)</h3><p>API reference: " + lnk(L.cur) + "</p><pre>" + esc(nodeCode.getCurrencies) + "</pre>";
+  h += "<h3>Webhook Handler</h3><p>API reference: " + lnk(L.wh) + "</p>";
+  h += "<p>Webhook headers: <code>X-Signature</code> (HMAC-SHA256), <code>X-Webhook-Delivery-Id</code>, <code>X-Transaction-Id</code>, <code>Authorization</code></p>";
+  h += "<p>Event types: <code>DEPOSIT_TX_CONFIRMED</code>, <code>DEPOSIT_TX_SUBMITTED</code>, <code>DEPOSIT_TX_ENRICHED</code>, <code>ALL</code></p>";
+  h += "<pre>" + esc(nodeCode.webhook) + "</pre>";
+  h += "<h3>Full Example (Express server)</h3><pre>" + esc(nodeCode.fullExample) + "</pre>";
 }
 
 if (sty !== "headless" && widgetCode[sty] && widgetCode[sty][lang]) {
-  html += "<h2>" + styleLabels[sty] + " — " + langLabels[lang] + " Code Sample</h2>\n";
-  if (lang === "react") html += "<p>NPM package: <a href='" + L.npm + "'>" + L.npm + "</a></p>\n";
-  html += "<pre>" + widgetCode[sty][lang] + "</pre>\n\n";
+  h += "<h2>" + esc(styleLabels[sty]) + " — " + esc(langLabels[lang]) + " Code Sample</h2>";
+  if (lang === "react") h += "<p>NPM package: " + lnk(L.npm) + "</p>";
+  h += "<pre>" + esc(widgetCode[sty][lang]) + "</pre>";
 }
 
-// ── API REFERENCE ──
-html += "<hr>\n";
-html += "<h2>API Reference</h2>\n";
-html += "<p>Create Deposit: <a href='" + L.cd + "'>" + L.cd + "</a></p>\n";
-html += "<p>Create Customer: <a href='" + L.cc + "'>" + L.cc + "</a></p>\n";
-html += "<p>Update Customer: <a href='" + L.uc + "'>" + L.uc + "</a></p>\n";
-html += "<p>Get Customer: <a href='" + L.gc + "'>" + L.gc + "</a></p>\n";
-html += "<p>Record Activity: <a href='" + L.ra + "'>" + L.ra + "</a></p>\n";
-html += "<p>Get Currencies: <a href='" + L.cur + "'>" + L.cur + "</a></p>\n";
-html += "<p>All Transactions: <a href='" + L.atx + "'>" + L.atx + "</a></p>\n";
-html += "<p>Customer Transactions: <a href='" + L.ctx + "'>" + L.ctx + "</a></p>\n";
-html += "<p>Create Webhook: <a href='" + L.wh + "'>" + L.wh + "</a></p>\n";
-html += "<p>Full Docs: <a href='" + L.docs + "'>" + L.docs + "</a></p>\n\n";
+// API REFERENCE
+h += "<hr>";
+h += "<h2>API Reference</h2>";
+var refs = [["Create Deposit",L.cd],["Create Customer",L.cc],["Update Customer",L.uc],["Get Customer",L.gc],["Record Activity",L.ra],["Get Currencies",L.cur],["All Transactions",L.atx],["Customer Transactions",L.ctx],["Create Webhook",L.wh],["Full Docs",L.docs]];
+for (var i = 0; i < refs.length; i++) {
+  h += "<p>" + refs[i][0] + ": " + lnk(refs[i][1]) + "</p>";
+}
 
-// ── WITHDRAWALS ──
+// WITHDRAWALS
 if (wd) {
-  html += "<hr>\n";
-  html += "<h2>Withdrawals Integration Steps</h2>\n";
-  html += "<p>Withdrawals are API-based and fully frontend-agnostic.</p>\n\n";
-  html += "<h3>Overview</h3>\n";
-  html += "<p>1. Create an account at <a href='" + L.sc + "'>console.swaps.xyz</a> and generate an API key</p>\n";
-  html += "<p>2. Generate an API key</p>\n";
-  html += "<p>3. Create a swap (withdrawal) via API. Swap documentation: <a href='" + L.sd + "'>" + L.sd + "</a></p>\n\n";
-  html += "<h3>Create a Withdrawal (Swap)</h3>\n";
-  html += "<p>A withdrawal is created by initiating a swap:</p>\n";
-  html += "<p>- Source wallet: Your platform wallet (e.g., user's custodial wallet)</p>\n";
-  html += "<p>- Destination wallet: User-input external wallet address</p>\n";
-  html += "<p>- Hardcode the source wallet</p>\n";
-  html += "<p>- Allow the user to input the destination address in your frontend</p>\n";
-  html += "<p>Use API responses to: show confirmation screen, display fees, trigger the transaction, poll for status updates.</p>\n\n";
-  html += "<h3>Interface Recommendations (Best Practices)</h3>\n";
-  html += "<p>1. Destination Wallet Input — Allow users to paste a wallet address with address format and chain compatibility validation</p>\n";
-  html += "<p>2. Chain Compatibility Disclaimer — \"Ensure the destination wallet supports the selected network. Sending funds to an incompatible network may result in permanent loss.\"</p>\n";
-  html += "<p>3. Real-Time Transaction Feedback — Use polling or webhooks for toast notifications, progress indicators, blockchain explorer links</p>\n";
+  h += "<hr>";
+  h += "<h2>Withdrawals Integration Steps</h2>";
+  h += "<p>Withdrawals are API-based and fully frontend-agnostic.</p>";
+  h += "<h3>Overview</h3>";
+  h += "<p>1. Create an account at " + lnk(L.sc, "console.swaps.xyz") + "</p>";
+  h += "<p>2. Generate an API key</p>";
+  h += "<p>3. Create a swap (withdrawal) via API. Swap documentation: " + lnk(L.sd) + "</p>";
+  h += "<h3>Create a Withdrawal (Swap)</h3>";
+  h += "<p>A withdrawal is created by initiating a swap:</p>";
+  h += "<p>&bull; <strong>Source wallet</strong> &rarr; Your platform wallet (e.g., user's custodial wallet)</p>";
+  h += "<p>&bull; <strong>Destination wallet</strong> &rarr; User-input external wallet address</p>";
+  h += "<p>&bull; Hardcode the source wallet; allow the user to input the destination address in your frontend</p>";
+  h += "<p>Use API responses to: show confirmation screen, display fees, trigger the transaction, poll for status updates.</p>";
+  h += "<h3>Interface Recommendations</h3>";
+  h += "<p>1. <strong>Destination Wallet Input</strong> — Allow users to paste a wallet address with address format and chain compatibility validation</p>";
+  h += "<p>2. <strong>Chain Compatibility Disclaimer</strong> — Warn users that sending funds to an incompatible network may result in permanent loss</p>";
+  h += "<p>3. <strong>Real-Time Transaction Feedback</strong> — Use polling or webhooks for toast notifications, progress indicators, blockchain explorer links</p>";
 }
 
-document.body.innerHTML = html;
+document.getElementById("root").innerHTML = h;
 </script>
 </body>
 </html>
