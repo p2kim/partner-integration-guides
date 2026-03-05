@@ -392,7 +392,6 @@ function App() {
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <Btn onClick={copyPartnerLink}>{cpl ? "✓ Link Copied!" : "📋 Copy Partner Link"}</Btn>
                     <Btn onClick={copyAgentLink}>{cpa ? "✓ Copied!" : "🤖 Copy Agent Link"}</Btn>
-                    <Btn onClick={copyMD}>{cpd ? "✓ Copied" : "Copy as Markdown"}</Btn>
                     <Btn onClick={reset}>Start Over</Btn>
                   </div>
                 </div>
