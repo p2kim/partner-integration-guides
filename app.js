@@ -260,6 +260,23 @@ function App() {
     setTimeout(function() { setCpl(false); }, 2000);
   };
 
+  var [cpa, setCpa] = useState(false);
+  var copyAgentLink = function() {
+    var p = new URLSearchParams();
+    p.set("p", partner);
+    if (sty) p.set("s", sty);
+    if (lang) p.set("l", lang);
+    if (wd) p.set("w", "1");
+    var base = window.location.origin + window.location.pathname;
+    if (base.endsWith("/")) base = base.slice(0, -1);
+    var pathParts = base.split("/");
+    pathParts.pop();
+    var url = pathParts.join("/") + "/agent.html?" + p.toString();
+    navigator.clipboard.writeText(url);
+    setCpa(true);
+    setTimeout(function() { setCpa(false); }, 2000);
+  };
+
   var wSamples = function() {
     if (sty === "modal") return WM;
     if (sty === "standalone") return WST;
@@ -372,8 +389,9 @@ function App() {
               {!isPartnerView && (
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
                   <Btn variant="ghost" onClick={function(){nx(2)}}>← Back</Btn>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <Btn onClick={copyPartnerLink}>{cpl ? "✓ Link Copied!" : "📋 Copy Partner Link"}</Btn>
+                    <Btn onClick={copyAgentLink}>{cpa ? "✓ Copied!" : "🤖 Copy Agent Link"}</Btn>
                     <Btn onClick={copyMD}>{cpd ? "✓ Copied" : "Copy as Markdown"}</Btn>
                     <Btn onClick={reset}>Start Over</Btn>
                   </div>
